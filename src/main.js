@@ -19,17 +19,17 @@ function calculateSimpleRevenue(purchase, _product) {
  */
 function calculateBonusByProfit(index, total, seller) {
     // @TODO: Расчет бонуса от позиции в рейтинге
-    const { profit } = seller;
-    let bonusPercent = 0.05;
+    const profit = seller.profit;
+    let bonusPercent = 5;
     if (index == 0) {
-        bonusPercent = 0.15;
+        bonusPercent = 15;
     } else if (index == 1 || index == 2) {
-        bonusPercent = 0.1;
+        bonusPercent = 10;
     } else if (index == total - 1) {
         bonusPercent = 0;
     }
 
-    return profit * bonusPercent;
+    return profit / 100 * bonusPercent;
 }
 
 /**
@@ -57,18 +57,18 @@ function analyzeSalesData(data, options) {
         throw new Error('ГДЕ ОПЦИИ, БИЛЛИ!?');
     }
 
-    // Step 3 ???
     const sellerStats = data.sellers.map(seller => {
         return {
-            "id": seller.id,
-            "first_name": seller.first_name,
-            "last_name": seller.last_name,
-            "start_date": seller.start_date,
-            "position": seller.position
+            seller_id: seller.id,
+            name: `${seller.first_name} ${seller.last_name}`,
+            revenue: 0,
+            profit: 0,
+            sales_count: 0,
+            products_sold: {}
         }
     });
 
-    const sellerIndex = Object.fromEntries(sellerStats.map(seller => [seller.id, seller]));
+    const sellerIndex = Object.fromEntries(sellerStats.map(seller => [seller.seller_id, seller]));
     const productIndex = Object.fromEntries(data.products.map(product => [product.sku, product]));
 
     // @TODO: Расчет выручки и прибыли для каждого продавца
@@ -80,7 +80,7 @@ function analyzeSalesData(data, options) {
         record.items.forEach(item => {
             const product = productIndex[item.sku];
             const cost = product.purchase_price * item.quantity;
-            const revenue = calculateRevenue(item, product);
+            const revenue = calculateRevenue(item);
             const profit = revenue - cost;
 
             seller.profit += profit;
@@ -93,7 +93,13 @@ function analyzeSalesData(data, options) {
     });
 
     // @TODO: Сортировка продавцов по прибыли
+    sellerStats.sort((a, b) => {
+        const profitA = a.profit || 0; // Обрабатываем случай, когда profit не определен
+        const profitB = b.profit || 0;
 
+        // Сортируем в порядке убывания (от большего к меньшему).
+        return profitB - profitA;
+    });
 
     // @TODO: Назначение премий на основе ранжирования
     let total = 0;
